@@ -134,11 +134,10 @@ const DeviceItem = ({ item, onPlay, playing }) => {
           <VideoPlayer
             cameraId={item.did}
             channel={channel}
-            codec={'hev1.1.6.L93.B0'}
+            codec={item.stream_type === 'jpeg' ? null : 'avc1.42E01E'}
+            streamType={item.stream_type || 'raw'}
             poster={item.cover}
             onCanvasRef={handleCanvasRef}
-            // onReady={handleVideoReady}
-            // onError={handleVideoError}
             style={{ width: '100%', height: '154px' }}
             onPlay={onPlay}
           />

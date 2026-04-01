@@ -24,6 +24,8 @@ class DeviceInfo(BaseModel):
     room_name: Optional[str] = Field(None, description="Room name")
     is_set_pincode: Optional[int] = Field(0, description="Whether PIN code is set")
     order_time: Optional[int] = Field(None, description="Binding time")
+    source_type: Optional[str] = Field("miot", description="Device source type")
+    stream_type: Optional[str] = Field("raw", description="Video stream transport type")
 
 class CameraInfo(DeviceInfo):
     """Camera info"""

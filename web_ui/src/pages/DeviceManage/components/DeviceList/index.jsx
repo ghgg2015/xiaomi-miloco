@@ -16,13 +16,13 @@ import styles from './index.module.less';
  * @param {Object} devices - The devices data to display
  * @returns {JSX.Element} Device list component
  */
-const DeviceList = ({ devices }) => {
+const DeviceList = ({ devices, onDelete }) => {
   const { t } = useTranslation();
 
   return (
     <div className={styles.deviceGrid}>
       {devices.map((device) => (
-        <DeviceCard key={device.did} device={device} />
+        <DeviceCard key={device.did} device={device} onDelete={onDelete} />
       ))}
     </div>
   );

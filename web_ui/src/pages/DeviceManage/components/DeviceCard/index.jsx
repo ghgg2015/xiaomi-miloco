@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { Button, Popconfirm } from 'antd';
 import { Card, Icon } from '@/components';
 import styles from './index.module.less';
 
@@ -14,8 +15,8 @@ import styles from './index.module.less';
  * @param {Object} device - The device data to display
  * @returns {JSX.Element} Device card component
  */
-const DeviceCard = ({ device }) => {
-  const { name, icon, room_name, home_name, online } = device;
+const DeviceCard = ({ device, onDelete }) => {
+  const { name, icon, room_name, home_name, online, source_type } = device;
   const StatusView = ({device}) => {
     const {  is_set_pincode } = device;
     if(is_set_pincode > 0){
@@ -42,6 +43,16 @@ const DeviceCard = ({ device }) => {
 
         </div>
       </div>
+      {source_type === 'rtsp' && onDelete ? (
+        <Popconfirm
+          title="Delete RTSP source?"
+          onConfirm={() => onDelete(device.did)}
+          okText="Delete"
+          cancelText="Cancel"
+        >
+          <Button type="link" danger size="small">Delete</Button>
+        </Popconfirm>
+      ) : null}
       <StatusView device={device} />
     </Card>
   );

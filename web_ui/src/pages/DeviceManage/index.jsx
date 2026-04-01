@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { Button, Form, Input, Modal, Switch } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Header, Icon, PageContent } from '@/components';
 import { DeviceList } from './components';
@@ -18,7 +19,18 @@ import styles from './index.module.less';
  */
 const DeviceManage = () => {
   const { t } = useTranslation();
-  const { devices, loading, refreshDevices } = useDevices();
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [form] = Form.useForm();
+  const { devices, loading, refreshDevices, addRtspSource, removeRtspSource } = useDevices();
+
+  const handleAddRtsp = async () => {
+    const values = await form.validateFields();
+    const success = await addRtspSource(values);
+    if (success) {
+      form.resetFields();
+      setModalOpen(false);
+    }
+  };
 
   return (
     <PageContent
@@ -29,16 +41,23 @@ const DeviceManage = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              cursor: 'pointer'
+              gap: '12px'
             }}
-            onClick={refreshDevices}
           >
-            <Icon
-              name="refresh"
-              size={15}
-              style={{ color: 'var(--text-color)' }}
-            />
-            <span style={{ fontSize: '14px', color: 'var(--text-color)', marginLeft: '6px' }}>{t('common.refresh')}</span>
+            <Button type="primary" onClick={() => setModalOpen(true)}>
+              {t('deviceManage.addRtsp')}
+            </Button>
+            <div
+              style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+              onClick={refreshDevices}
+            >
+              <Icon
+                name="refresh"
+                size={15}
+                style={{ color: 'var(--text-color)' }}
+              />
+              <span style={{ fontSize: '14px', color: 'var(--text-color)', marginLeft: '6px' }}>{t('common.refresh')}</span>
+            </div>
           </div>
           }
         />
@@ -50,7 +69,32 @@ const DeviceManage = () => {
         imageStyle: { width: 72, height: 72 },
       }}
     >
-      <DeviceList devices={devices} />
+      <DeviceList devices={devices} onDelete={removeRtspSource} />
+      <Modal
+        title={t('deviceManage.addRtsp')}
+        open={modalOpen}
+        onOk={handleAddRtsp}
+        onCancel={() => setModalOpen(false)}
+        destroyOnHidden
+      >
+        <Form form={form} layout="vertical" initialValues={{ enabled: true, home_name: 'RTSP', room_name: 'Custom Camera' }}>
+          <Form.Item name="name" label={t('deviceManage.rtspName')} rules={[{ required: true }]}>
+            <Input placeholder="Front Gate Camera" />
+          </Form.Item>
+          <Form.Item name="rtsp_url" label={t('deviceManage.rtspUrl')} rules={[{ required: true }]}>
+            <Input placeholder="rtsp://user:pass@192.168.1.10:554/stream1" />
+          </Form.Item>
+          <Form.Item name="home_name" label={t('deviceManage.rtspGroup')}>
+            <Input placeholder="RTSP" />
+          </Form.Item>
+          <Form.Item name="room_name" label={t('deviceManage.rtspRoom')}>
+            <Input placeholder="Custom Camera" />
+          </Form.Item>
+          <Form.Item name="enabled" label={t('deviceManage.rtspEnabled')} valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Form>
+      </Modal>
     </PageContent>
   );
 };

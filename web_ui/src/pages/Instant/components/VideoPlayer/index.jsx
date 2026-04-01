@@ -47,7 +47,7 @@ const detectCodec = (data) => {
  * @param {Function} [props.onCanvasRef] - Canvas ref callback function
  * @returns {JSX.Element} Video player component
  */
-const VideoPlayer = ({ codec = 'avc1.42E01E', poster, style, cameraId, channel, onCanvasRef, onPlay }) => {
+const VideoPlayer = ({ codec = 'avc1.42E01E', streamType = 'raw', poster, style, cameraId, channel, onCanvasRef, onPlay }) => {
   const { t } = useTranslation();
   const canvasRef = useRef(null)
   const wsRef = useRef(null)
@@ -69,7 +69,7 @@ const VideoPlayer = ({ codec = 'avc1.42E01E', poster, style, cameraId, channel, 
         windowType: typeof window
       })
 
-      const supported = (
+      const supported = streamType === 'jpeg' || (
         typeof window !== 'undefined' &&
         'VideoDecoder' in window &&
         'VideoFrame' in window &&
@@ -150,7 +150,7 @@ const VideoPlayer = ({ codec = 'avc1.42E01E', poster, style, cameraId, channel, 
     const init = async () => {
       if (!cameraId || isSupported === null) {return} // wait for support detection to complete
 
-      if (isFirefox()) {
+      if (streamType !== 'jpeg' && isFirefox()) {
         setError(t('instant.deviceList.browserNotSupport'))
         message.error(t('instant.deviceList.browserNotSupport'))
         onPlay && onPlay()
@@ -217,41 +217,73 @@ const VideoPlayer = ({ codec = 'avc1.42E01E', poster, style, cameraId, channel, 
         }
       }
 
-      decoderRef.current = new window.VideoDecoder({
-        output: frame => {
-          createImageBitmap(frame).then(bitmap => {
-            canvas.width = frame.codedWidth
-            canvas.height = frame.codedHeight
-            ctx.drawImage(bitmap, 0, 0)
-            frame.close()
-            bitmap.close && bitmap.close()
-            if (!ready) {
-              setLoading(false)
-              setShow(true)
-              if (onCanvasRef && canvasRef.current) {
-                onCanvasRef(canvasRef)
+      const configureDecoder = (nextCodec) => {
+        if (!decoderRef.current || !nextCodec) {return}
+        decoderRef.current.configure({
+          codec: nextCodec,
+          hardwareAcceleration: 'prefer-hardware',
+        })
+      }
+      if (streamType !== 'jpeg') {
+        decoderRef.current = new window.VideoDecoder({
+          output: frame => {
+            createImageBitmap(frame).then(bitmap => {
+              canvas.width = frame.codedWidth
+              canvas.height = frame.codedHeight
+              ctx.drawImage(bitmap, 0, 0)
+              frame.close()
+              bitmap.close && bitmap.close()
+              if (!ready) {
+                setLoading(false)
+                setShow(true)
+                if (onCanvasRef && canvasRef.current) {
+                  onCanvasRef(canvasRef)
+                }
+                ready = true
               }
-              // handleReady()
-              ready = true
-            }
-          })
-        },
-        error: () => {
-          setError(t('instant.deviceList.deviceDecodeFailed'))
-          message.error(t('instant.deviceList.deviceDecodeFailed'))
-        }
-      })
-      decoderRef.current.configure({
-        codec,
-        hardwareAcceleration: 'prefer-hardware',
-      })
+            })
+          },
+          error: () => {
+            setError(t('instant.deviceList.deviceDecodeFailed'))
+            message.error(t('instant.deviceList.deviceDecodeFailed'))
+          }
+        })
+        configureDecoder(codec)
+      }
       wsRef.current.onmessage = e => {
         if (e.data instanceof ArrayBuffer) {
           const uint8 = new Uint8Array(e.data);
+          if (streamType === 'jpeg') {
+            const blob = new Blob([uint8], { type: 'image/jpeg' });
+            const image = new Image();
+            const imageUrl = URL.createObjectURL(blob);
+            image.onload = () => {
+              canvas.width = image.naturalWidth || canvas.width;
+              canvas.height = image.naturalHeight || canvas.height;
+              ctx.drawImage(image, 0, 0);
+              URL.revokeObjectURL(imageUrl);
+              if (!ready) {
+                setLoading(false)
+                setShow(true)
+                if (onCanvasRef && canvasRef.current) {
+                  onCanvasRef(canvasRef)
+                }
+                ready = true
+              }
+            };
+            image.onerror = () => {
+              URL.revokeObjectURL(imageUrl);
+              setError(t('instant.deviceList.deviceDecodeFailed'))
+            };
+            image.src = imageUrl;
+            return;
+          }
           if (!autoCodec) {
             const detected = detectCodec(uint8);
             if (detected !== 'unknown') {
-              setAutoCodec(detected === 'h264' ? 'avc1.42E01E' : 'hvc1.1.6.L93.B0');
+              const nextCodec = detected === 'h264' ? 'avc1.42E01E' : 'hvc1.1.6.L93.B0';
+              setAutoCodec(nextCodec);
+              configureDecoder(nextCodec);
             }
           }
           const useCodec = autoCodec || codec;
@@ -300,7 +332,7 @@ const VideoPlayer = ({ codec = 'avc1.42E01E', poster, style, cameraId, channel, 
         decoderRef.current = null;
       }
     }
-  }, [codec, isSupported, cameraId, channel])
+  }, [codec, isSupported, cameraId, channel, streamType])
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', ...style }}>

@@ -26,6 +26,10 @@ export const refreshMiotDevices = () => getApi('/api/miot/refresh_miot_devices')
 export const refreshMiotScenes = () => getApi('/api/miot/refresh_miot_scenes');
 export const refreshMiotCamera = () => getApi('/api/miot/refresh_miot_cameras');
 export const getRefreshMiotAllInfo = () => getApi('/api/miot/refresh_miot_all_info');
+export const getRtspSources = () => getApi('/api/miot/rtsp_sources');
+export const createRtspSource = (data) => postApi('/api/miot/rtsp_sources', data);
+export const updateRtspSource = (sourceId, data) => putApi(`/api/miot/rtsp_sources/${sourceId}`, data);
+export const deleteRtspSource = (sourceId) => deleteApi(`/api/miot/rtsp_sources/${sourceId}`);
 
 // trigger API
 export const saveSmartRule = (data) => postApi('/api/trigger/rule', data);

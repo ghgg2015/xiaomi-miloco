@@ -13,6 +13,7 @@ from miot.types import MIoTUserInfo, MIoTCameraInfo, MIoTDeviceInfo, MIoTManualS
 from miloco_server.proxy.miot_proxy import MiotProxy
 from miloco_server.schema.trigger_schema import Action
 from miloco_server.schema.miot_schema import CameraChannel, CameraImgSeq, CameraInfo, DeviceInfo, SceneInfo
+from miloco_server.schema.rtsp_schema import RTSPSource, RTSPSourceCreate, RTSPSourceUpdate
 from miloco_server.middleware.exceptions import (
     MiotOAuthException,
     MiotServiceException,
@@ -22,6 +23,7 @@ from miloco_server.middleware.exceptions import (
 )
 from miloco_server.utils.default_action import DefaultPresetActionManager
 from miloco_server.mcp.mcp_client_manager import MCPClientManager
+from miloco_server.utils.rtsp_source_manager import RTSPSourceManager
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +32,12 @@ class MiotService:
     """MiOT service class"""
 
     def __init__(self, miot_proxy: MiotProxy, mcp_client_manager: MCPClientManager,
-                 default_preset_action_manager: Optional[DefaultPresetActionManager] = None):
+                 default_preset_action_manager: Optional[DefaultPresetActionManager] = None,
+                 rtsp_source_manager: Optional[RTSPSourceManager] = None):
         self._miot_proxy = miot_proxy
         self._mcp_client_manager = mcp_client_manager
         self._default_preset_action_manager = default_preset_action_manager
+        self._rtsp_source_manager = rtsp_source_manager
 
     @property
     def miot_client(self):
@@ -180,13 +184,14 @@ class MiotService:
             camera_dict: dict[
                 str,
                 MIoTCameraInfo] | None = await self._miot_proxy.get_cameras()
-            if not camera_dict:
-                raise MiotServiceException("Failed to get MiOT camera list")
-
             camera_list = [
                 CameraInfo.model_validate(camera_info.model_dump())
-                for camera_info in camera_dict.values()
+                for camera_info in (camera_dict or {}).values()
             ]
+            if self._rtsp_source_manager:
+                camera_list.extend(self._rtsp_source_manager.get_camera_list())
+            if not camera_list:
+                raise MiotServiceException("Failed to get MiOT camera list")
 
             return camera_list
         except MiotServiceException:
@@ -218,8 +223,7 @@ class MiotService:
             "get_miot_cameras_img, camera_dids: %s", ", ".join(camera_dids))
         try:
             all_camera_info: dict[str, MIoTCameraInfo] = await self._miot_proxy.get_cameras()
-            if not all_camera_info:
-                return []
+            all_camera_info = all_camera_info or {}
 
             selected_camera_info: list[MIoTCameraInfo] = [
                 info for info in all_camera_info.values() if (info.did in camera_dids)
@@ -235,6 +239,9 @@ class MiotService:
             for camera_channel in camera_channels:
                 camera_img_seq = self._miot_proxy.get_recent_camera_img(
                     camera_channel.did, camera_channel.channel, vision_use_img_count)
+                if camera_img_seq is None and self._rtsp_source_manager:
+                    camera_img_seq = self._rtsp_source_manager.get_recent_camera_img(
+                        camera_channel.did, vision_use_img_count)
                 if not camera_img_seq:
                     logger.error(
                         "get_miot_cameras_img, get recent camera img failed, did: %s, channel: %s",
@@ -243,6 +250,14 @@ class MiotService:
                     continue
 
                 camera_img_seqs.append(camera_img_seq)
+            if self._rtsp_source_manager:
+                miot_selected_ids = {camera.did for camera in selected_camera_info}
+                for camera_id in camera_dids:
+                    if camera_id in miot_selected_ids:
+                        continue
+                    camera_img_seq = self._rtsp_source_manager.get_recent_camera_img(camera_id, vision_use_img_count)
+                    if camera_img_seq:
+                        camera_img_seqs.append(camera_img_seq)
             return camera_img_seqs
         except Exception as e:
             logger.error("Failed to get MiOT camera images: %s", e)
@@ -308,8 +323,11 @@ class MiotService:
         try:
             logger.info("Starting video stream: camera_id=%s, channel=%s", camera_id, channel)
             if callback:
-                await self._miot_proxy.start_camera_raw_stream(
-                    camera_id, channel, callback)
+                if self._rtsp_source_manager and camera_id.startswith("rtsp:"):
+                    await self._rtsp_source_manager.start_video_stream(camera_id, channel, callback)
+                else:
+                    await self._miot_proxy.start_camera_raw_stream(
+                        camera_id, channel, callback)
             else:
                 logger.info("No callback function, only recording startup request: camera_id=%s", camera_id)
         except Exception as e:
@@ -328,11 +346,53 @@ class MiotService:
         """
         try:
             logger.info("Stopping video stream: camera_id=%s", camera_id)
-            await self._miot_proxy.stop_camera_raw_stream(camera_id, channel)
+            if self._rtsp_source_manager and camera_id.startswith("rtsp:"):
+                await self._rtsp_source_manager.stop_video_stream(camera_id, channel)
+            else:
+                await self._miot_proxy.stop_camera_raw_stream(camera_id, channel)
             logger.info("Video stream stopped successfully: camera_id=%s", camera_id)
         except Exception as e:
             logger.error("Failed to stop video stream: %s", e)
             raise MiotServiceException(f"Failed to stop video stream: {str(e)}") from e
+
+    async def get_rtsp_sources(self) -> List[RTSPSource]:
+        if not self._rtsp_source_manager:
+            return []
+        return self._rtsp_source_manager.list_sources()
+
+    async def create_rtsp_source(self, payload: RTSPSourceCreate) -> RTSPSource:
+        if not self._rtsp_source_manager:
+            raise MiotServiceException("RTSP source manager not initialized")
+        try:
+            return self._rtsp_source_manager.create_source(payload)
+        except Exception as e:
+            logger.error("Failed to create RTSP source: %s", e)
+            raise MiotServiceException(f"Failed to create RTSP source: {str(e)}") from e
+
+    async def update_rtsp_source(self, source_id: str, payload: RTSPSourceUpdate) -> RTSPSource:
+        if not self._rtsp_source_manager:
+            raise MiotServiceException("RTSP source manager not initialized")
+        try:
+            return self._rtsp_source_manager.update_source(source_id, payload)
+        except KeyError as e:
+            raise ResourceNotFoundException(f"RTSP source not found: {source_id}") from e
+        except Exception as e:
+            logger.error("Failed to update RTSP source: %s", e)
+            raise MiotServiceException(f"Failed to update RTSP source: {str(e)}") from e
+
+    async def delete_rtsp_source(self, source_id: str) -> bool:
+        if not self._rtsp_source_manager:
+            raise MiotServiceException("RTSP source manager not initialized")
+        try:
+            result = self._rtsp_source_manager.delete_source(source_id)
+            if not result:
+                raise ResourceNotFoundException(f"RTSP source not found: {source_id}")
+            return result
+        except ResourceNotFoundException:
+            raise
+        except Exception as e:
+            logger.error("Failed to delete RTSP source: %s", e)
+            raise MiotServiceException(f"Failed to delete RTSP source: {str(e)}") from e
 
     async def get_miot_scene_actions(self) -> List[Action]:
         """

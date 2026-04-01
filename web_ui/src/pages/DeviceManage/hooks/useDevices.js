@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getDeviceList, refreshMiotDevices } from '@/api';
+import { getCameraList, refreshMiotCamera, createRtspSource, deleteRtspSource } from '@/api';
 import { message } from 'antd';
 
 export const useDevices = () => {
@@ -18,21 +18,23 @@ export const useDevices = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getDeviceList();
+      const response = await getCameraList();
 
       if (response.code === 0) {
         // sort by order: online but not set password > online and set password > offline and set password > offline and not set password
         const sortedDevices = response.data.sort((a, b) => {
           // get device type weight
           const getDeviceWeight = (device) => {
-            if (device.online && device.is_set_pincode <= 0) {
-              return 1; // online but not set password
+            if (device.source_type === 'rtsp' && device.online) {
+              return 0;
+            } else if (device.online && device.is_set_pincode <= 0) {
+              return 1;
             } else if (device.online && device.is_set_pincode > 0) {
-              return 2; // online and set password
+              return 2;
             } else if (!device.online && device.is_set_pincode > 0) {
-              return 3; // offline and set password
+              return 3;
             } else {
-              return 4; // offline and not set password
+              return 4;
             }
           };
 
@@ -51,18 +53,40 @@ export const useDevices = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const refreshDevices = useCallback(async () => {
     setLoading(true);
-    const res = await refreshMiotDevices();
+    const res = await refreshMiotCamera();
     if (res.code === 0) {
       await fetchDevices();
     } else {
       message.error(res.message || t('deviceManage.refreshDeviceListFailed'));
     }
     setLoading(false);
-  }, [fetchDevices]);
+  }, [fetchDevices, t]);
+
+  const addRtspSource = useCallback(async (payload) => {
+    const res = await createRtspSource(payload);
+    if (res.code === 0) {
+      message.success(t('deviceManage.addRtspSuccess'));
+      await fetchDevices();
+      return true;
+    }
+    message.error(res.message || t('deviceManage.addRtspFailed'));
+    return false;
+  }, [fetchDevices, t]);
+
+  const removeRtspSource = useCallback(async (sourceId) => {
+    const res = await deleteRtspSource(sourceId);
+    if (res.code === 0) {
+      message.success(t('deviceManage.deleteRtspSuccess'));
+      await fetchDevices();
+      return true;
+    }
+    message.error(res.message || t('deviceManage.deleteRtspFailed'));
+    return false;
+  }, [fetchDevices, t]);
 
   useEffect(() => {
     fetchDevices();
@@ -72,6 +96,8 @@ export const useDevices = () => {
     devices,
     loading,
     error,
-    refreshDevices
+    refreshDevices,
+    addRtspSource,
+    removeRtspSource
   };
 };

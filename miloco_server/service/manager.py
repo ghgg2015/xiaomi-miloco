@@ -7,6 +7,7 @@ Service manager module
 
 import logging
 import uuid
+import asyncio
 from typing import Callable, Optional
 
 
@@ -35,6 +36,7 @@ from miloco_server.service.mcp_service import McpService
 from miloco_server.service.chat_history_service import ChatHistoryService
 from miloco_server.config.normal_config import MIOT_CONFIG
 from miloco_server.utils.chat_companion import ChatCompanion
+from miloco_server.utils.rtsp_source_manager import RTSPSourceManager
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +88,10 @@ class Manager:
             redirect_uri="https://mico.api.mijia.tech/login_redirect",
             kv_dao=self._kv_dao,
             cloud_server=MIOT_CONFIG["cloud_server"])
+        self._rtsp_source_manager = RTSPSourceManager(
+            kv_dao=self._kv_dao,
+            loop=asyncio.get_running_loop(),
+        )
 
         self._ha_proxy = HAProxy(kv_dao=self._kv_dao)
 
@@ -113,7 +119,7 @@ class Manager:
         # Initialize all services
         self._auth_service = AuthService(self._kv_dao)
         self._miot_service = MiotService(
-            self._miot_proxy, self._mcp_client_manager, self._default_preset_action_manager)
+            self._miot_proxy, self._mcp_client_manager, self._default_preset_action_manager, self._rtsp_source_manager)
         self._ha_service = HaService(self._ha_proxy, self._mcp_client_manager, self._default_preset_action_manager)
         self._model_service = ModelService(self._kv_dao, self._third_party_model_dao)
         self._mcp_service = McpService(self._mcp_config_dao, self._mcp_client_manager)

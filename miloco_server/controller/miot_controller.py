@@ -20,6 +20,7 @@ from miloco_server.middleware import (
 )
 from miloco_server.middleware import MiotServiceException, ResourceNotFoundException
 from miloco_server.schema.common_schema import NormalResponse
+from miloco_server.schema.rtsp_schema import RTSPSourceCreate, RTSPSourceUpdate
 from miloco_server.service.manager import get_manager
 
 logger = logging.getLogger(name=__name__)
@@ -129,6 +130,46 @@ async def get_miot_camera_list(current_user: str = Depends(verify_token)):
         code=0,
         message="MiOT camera list retrieved successfully",
         data=camera_list
+    )
+
+
+@router.get(path="/rtsp_sources", summary="Get RTSP source list", response_model=NormalResponse)
+async def get_rtsp_sources(current_user: str = Depends(verify_token)):
+    sources = await manager.miot_service.get_rtsp_sources()
+    return NormalResponse(
+        code=0,
+        message="RTSP source list retrieved successfully",
+        data=sources,
+    )
+
+
+@router.post(path="/rtsp_sources", summary="Create RTSP source", response_model=NormalResponse)
+async def create_rtsp_source(payload: RTSPSourceCreate, current_user: str = Depends(verify_token)):
+    source = await manager.miot_service.create_rtsp_source(payload)
+    return NormalResponse(
+        code=0,
+        message="RTSP source created successfully",
+        data=source,
+    )
+
+
+@router.put(path="/rtsp_sources/{source_id}", summary="Update RTSP source", response_model=NormalResponse)
+async def update_rtsp_source(source_id: str, payload: RTSPSourceUpdate, current_user: str = Depends(verify_token)):
+    source = await manager.miot_service.update_rtsp_source(source_id, payload)
+    return NormalResponse(
+        code=0,
+        message="RTSP source updated successfully",
+        data=source,
+    )
+
+
+@router.delete(path="/rtsp_sources/{source_id}", summary="Delete RTSP source", response_model=NormalResponse)
+async def delete_rtsp_source(source_id: str, current_user: str = Depends(verify_token)):
+    await manager.miot_service.delete_rtsp_source(source_id)
+    return NormalResponse(
+        code=0,
+        message="RTSP source deleted successfully",
+        data=True,
     )
 
 @router.get(path="/device_list", summary="Get MiOT device list", response_model=NormalResponse)

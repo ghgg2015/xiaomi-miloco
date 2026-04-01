@@ -82,7 +82,13 @@ const DeviceManage = () => {
             <Input placeholder="Front Gate Camera" />
           </Form.Item>
           <Form.Item name="rtsp_url" label={t('deviceManage.rtspUrl')} rules={[{ required: true }]}>
-            <Input placeholder="rtsp://user:pass@192.168.1.10:554/stream1" />
+            <Input placeholder="rtsp://192.168.1.10:554/stream1" />
+          </Form.Item>
+          <Form.Item name="username" label={t('deviceManage.rtspUsername')}>
+            <Input placeholder="admin" />
+          </Form.Item>
+          <Form.Item name="password" label={t('deviceManage.rtspPassword')}>
+            <Input.Password placeholder="password" />
           </Form.Item>
           <Form.Item name="home_name" label={t('deviceManage.rtspGroup')}>
             <Input placeholder="RTSP" />

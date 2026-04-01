@@ -354,6 +354,8 @@ export default {
     addRtsp: 'Add RTSP',
     rtspName: 'Camera name',
     rtspUrl: 'RTSP URL',
+    rtspUsername: 'Username',
+    rtspPassword: 'Password',
     rtspGroup: 'Group',
     rtspRoom: 'Room',
     rtspEnabled: 'Enabled',

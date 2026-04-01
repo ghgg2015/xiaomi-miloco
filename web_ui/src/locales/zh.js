@@ -356,6 +356,8 @@ export default {
     addRtsp: '添加RTSP',
     rtspName: '摄像头名称',
     rtspUrl: 'RTSP地址',
+    rtspUsername: '用户名',
+    rtspPassword: '密码',
     rtspGroup: '分组',
     rtspRoom: '房间',
     rtspEnabled: '启用',

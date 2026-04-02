@@ -31,6 +31,15 @@ class NlpRequestAgent(ChatAgent):
         mcp_list = payload.mcp_list
         self._set_tools_meta(mcp_list)
 
+        if payload.camera_ids:
+            self._chat_history_messages.add_content(
+                "system",
+                "The user has already selected camera feeds for this request. "
+                "When answering scene, object, person, action, or visual status questions, "
+                "you must inspect the selected cameras through available vision tools before answering. "
+                "Do not say that you cannot access or view the user's camera when vision tools are available."
+            )
+
         self._chat_companion.set_chat_data(
             self._request_id,
             ChatCachedData(

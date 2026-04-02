@@ -277,8 +277,15 @@ class ChatAgent(Actor):
                     "Planning model not exit, Please configure on the Model Settings Page")
             chat_messages = self._chat_history_messages.get_messages()
             tools = self._all_mcp_tools_meta or None
+            tool_choice = None
+            chat_data = self._chat_companion.get_chat_data(self._request_id)
+            if tools and chat_data and chat_data.camera_ids:
+                # When the user selected cameras, require tool usage so the model
+                # inspects camera content via vision tools instead of replying
+                # with a generic "I can't access your camera" disclaimer.
+                tool_choice = "required"
             logger.info("Start to calling LLM: %s. chat_messages: %s", self._request_id, chat_messages)
-            return self._llm_proxy.async_call_llm_stream(chat_messages, tools)
+            return self._llm_proxy.async_call_llm_stream(chat_messages, tools, tool_choice)
         except Exception as e:
             logger.error("[%s] Error occurred while calling LLM: %s",
                          self._request_id, str(e))

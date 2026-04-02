@@ -5,7 +5,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional, Any
 
 from openai import AsyncOpenAI, AsyncStream
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
@@ -24,13 +24,15 @@ class LLMProxy(ABC):
 
     @abstractmethod
     async def async_call_llm(self, messages: list[ChatCompletionMessageParam],
-                           tools: Optional[list[ChatCompletionToolParam]] = None) -> dict[str, any]:
+                           tools: Optional[list[ChatCompletionToolParam]] = None,
+                           tool_choice: Optional[Any] = None) -> dict[str, any]:
         """Async call LLM (non-streaming)."""
         pass
 
     @abstractmethod
     async def async_call_llm_stream(self, messages: list[ChatCompletionMessageParam],
-                                  tools: Optional[list[ChatCompletionToolParam]] = None) -> AsyncGenerator[dict[str, any], None]:
+                                  tools: Optional[list[ChatCompletionToolParam]] = None,
+                                  tool_choice: Optional[Any] = None) -> AsyncGenerator[dict[str, any], None]:
         """Async call LLM (streaming)."""
         pass
 
@@ -99,7 +101,8 @@ class OpenAIProxy(LLMProxy):
         return self.__str__()
 
     async def async_call_llm(self, messages: list[ChatCompletionMessageParam],
-                           tools: Optional[list[ChatCompletionToolParam]] = None) -> dict[str, any]:
+                           tools: Optional[list[ChatCompletionToolParam]] = None,
+                           tool_choice: Optional[Any] = None) -> dict[str, any]:
         """
         Call vision language model (async version, non-streaming)
         
@@ -123,6 +126,8 @@ class OpenAIProxy(LLMProxy):
             }
             if tools:
                 create_kwargs["tools"] = tools
+                if tool_choice is not None:
+                    create_kwargs["tool_choice"] = tool_choice
 
             completion = await self.async_client.chat.completions.create(
                 **create_kwargs,
@@ -142,7 +147,8 @@ class OpenAIProxy(LLMProxy):
             }
 
     async def async_call_llm_stream(self, messages: list[ChatCompletionMessageParam],
-                                  tools: Optional[list[ChatCompletionToolParam]] = None) -> AsyncGenerator[dict[str, any], None]:
+                                  tools: Optional[list[ChatCompletionToolParam]] = None,
+                                  tool_choice: Optional[Any] = None) -> AsyncGenerator[dict[str, any], None]:
         """
         Call vision language model (async version, streaming)
         
@@ -166,6 +172,8 @@ class OpenAIProxy(LLMProxy):
             }
             if tools:
                 create_kwargs["tools"] = tools
+                if tool_choice is not None:
+                    create_kwargs["tool_choice"] = tool_choice
 
             completion: AsyncStream = await self.async_client.chat.completions.create(
                 **create_kwargs,

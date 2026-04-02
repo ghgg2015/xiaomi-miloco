@@ -33,43 +33,45 @@ const DeviceManage = () => {
   };
 
   return (
-    <PageContent
-      Header={(
-        <Header
-          title={t('home.menu.deviceManage')}
-          rightContent={<div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}
-          >
-            <Button type="primary" onClick={() => setModalOpen(true)}>
-              {t('deviceManage.addRtsp')}
-            </Button>
-            <div
-              style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-              onClick={refreshDevices}
+    <>
+      <PageContent
+        Header={(
+          <Header
+            title={t('home.menu.deviceManage')}
+            rightContent={<div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}
             >
-              <Icon
-                name="refresh"
-                size={15}
-                style={{ color: 'var(--text-color)' }}
-              />
-              <span style={{ fontSize: '14px', color: 'var(--text-color)', marginLeft: '6px' }}>{t('common.refresh')}</span>
+              <Button type="primary" onClick={() => setModalOpen(true)}>
+                {t('deviceManage.addRtsp')}
+              </Button>
+              <div
+                style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                onClick={refreshDevices}
+              >
+                <Icon
+                  name="refresh"
+                  size={15}
+                  style={{ color: 'var(--text-color)' }}
+                />
+                <span style={{ fontSize: '14px', color: 'var(--text-color)', marginLeft: '6px' }}>{t('common.refresh')}</span>
+              </div>
             </div>
-          </div>
-          }
-        />
-      )}
-      loading={loading}
-      showEmptyContent={!loading && devices.length === 0}
-      emptyContentProps={{
-        description: t('deviceManage.noDevice'),
-        imageStyle: { width: 72, height: 72 },
-      }}
-    >
-      <DeviceList devices={devices} onDelete={removeRtspSource} />
+            }
+          />
+        )}
+        loading={loading}
+        showEmptyContent={!loading && devices.length === 0}
+        emptyContentProps={{
+          description: t('deviceManage.noDevice'),
+          imageStyle: { width: 72, height: 72 },
+        }}
+      >
+        <DeviceList devices={devices} onDelete={removeRtspSource} />
+      </PageContent>
       <Modal
         title={t('deviceManage.addRtsp')}
         open={modalOpen}
@@ -101,7 +103,7 @@ const DeviceManage = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </PageContent>
+    </>
   );
 };
 

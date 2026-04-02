@@ -5,7 +5,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getCameraList, refreshMiotCamera, createRtspSource, deleteRtspSource } from '@/api';
+import {
+  getCameraList,
+  getDeviceList,
+  refreshMiotCamera,
+  refreshMiotDevices,
+  createRtspSource,
+  deleteRtspSource
+} from '@/api';
 import { message } from 'antd';
 
 export const useDevices = () => {
@@ -18,11 +25,18 @@ export const useDevices = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getCameraList();
+      const [deviceResponse, cameraResponse] = await Promise.all([
+        getDeviceList(),
+        getCameraList()
+      ]);
 
-      if (response.code === 0) {
+      if (deviceResponse.code === 0) {
+        const rtspDevices = (cameraResponse?.code === 0 ? cameraResponse.data : []).filter(
+          (item) => item?.source_type === 'rtsp'
+        );
+        const mergedDevices = [...deviceResponse.data, ...rtspDevices];
         // sort by order: online but not set password > online and set password > offline and set password > offline and not set password
-        const sortedDevices = response.data.sort((a, b) => {
+        const sortedDevices = mergedDevices.sort((a, b) => {
           // get device type weight
           const getDeviceWeight = (device) => {
             if (device.source_type === 'rtsp' && device.online) {
@@ -45,7 +59,7 @@ export const useDevices = () => {
         });
         setDevices(sortedDevices || []);
       } else {
-        setError(response.message || t('deviceManage.fetchDeviceListFailed'));
+        setError(deviceResponse.message || t('deviceManage.fetchDeviceListFailed'));
       }
     } catch (err) {
       setError(t('deviceManage.fetchDeviceListFailed'));
@@ -57,11 +71,18 @@ export const useDevices = () => {
 
   const refreshDevices = useCallback(async () => {
     setLoading(true);
-    const res = await refreshMiotCamera();
-    if (res.code === 0) {
+    const [deviceRes, cameraRes] = await Promise.all([
+      refreshMiotDevices(),
+      refreshMiotCamera()
+    ]);
+    if (deviceRes.code === 0 && cameraRes.code === 0) {
       await fetchDevices();
     } else {
-      message.error(res.message || t('deviceManage.refreshDeviceListFailed'));
+      message.error(
+        deviceRes.message ||
+        cameraRes.message ||
+        t('deviceManage.refreshDeviceListFailed')
+      );
     }
     setLoading(false);
   }, [fetchDevices, t]);

@@ -353,6 +353,10 @@ class ChatAgent(Actor):
             flags=re.IGNORECASE | re.DOTALL,
         )
         if not matches:
+            stripped_content = content.strip()
+            if stripped_content.startswith("{") and stripped_content.endswith("}"):
+                matches = [stripped_content]
+        if not matches:
             return []
 
         tool_calls: list[ChatCompletionMessageToolCall] = []
@@ -395,6 +399,7 @@ class ChatAgent(Actor):
 
         tool_name_mapping = {
             "vision_analyze": f"{LocalMcpClientId.LOCAL_DEFAULT}___vision_understand",
+            "visual_analyze": f"{LocalMcpClientId.LOCAL_DEFAULT}___vision_understand",
             "vision_understand": f"{LocalMcpClientId.LOCAL_DEFAULT}___vision_understand",
             "create_rule": f"{LocalMcpClientId.LOCAL_DEFAULT}___create_rule",
         }
@@ -417,6 +422,12 @@ class ChatAgent(Actor):
             r"<reflect>.*?</reflect>",
             "",
             content,
+            flags=re.IGNORECASE | re.DOTALL,
+        ).strip()
+        cleaned = re.sub(
+            r"<think>.*?</think>",
+            "",
+            cleaned,
             flags=re.IGNORECASE | re.DOTALL,
         ).strip()
         if cleaned:

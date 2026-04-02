@@ -7,7 +7,7 @@ import json
 import logging
 from typing import Any, Optional
 
-from miloco_server.schema.mcp_schema import CallToolResult
+from miloco_server.schema.mcp_schema import CallToolResult, LocalMcpClientId
 from miloco_server.mcp.mcp_client_manager import MCPClientManager
 from openai.types.chat import ChatCompletionMessageToolCall, ChatCompletionToolParam
 from openai.types.shared.function_definition import FunctionDefinition
@@ -176,6 +176,9 @@ class ToolExecutor:
             client_id, tool_name = tool_name.split(TOOL_NAME_CONNECT_CHARS, 1)
         else:
             client_id = "unknown"
+            local_default_client = self.mcp_client_manager.get_client(LocalMcpClientId.LOCAL_DEFAULT)
+            if local_default_client and local_default_client.get_tool(tool_name):
+                client_id = LocalMcpClientId.LOCAL_DEFAULT
 
         return client_id, tool_name, parameters
 

@@ -31,6 +31,7 @@ export const useChatStore = create(
         cameraList: [],
         selectedCameraIds: [],
         mcpList: [],
+        functionCallingFormat: 'openai',
         input: '',
 
         // === UI state ===
@@ -135,6 +136,7 @@ export const useChatStore = create(
         },
 
         setMcpList: (list) => set({ mcpList: list }),
+        setFunctionCallingFormat: (functionCallingFormat) => set({ functionCallingFormat }),
         toggleMcpService: (serviceId) => set((state) => {
           const isSelected = state.mcpList.includes(serviceId);
           return {
@@ -318,6 +320,7 @@ export const useChatStore = create(
                 isScrollToBottom: true,
                 selectedCameraIds: latestConfig?.cameraIds || [],
                 mcpList: latestConfig?.mcpList || [],
+                functionCallingFormat: latestConfig?.functionCallingFormat || 'openai',
               });
               console.log('✅ sessionId:', historySessionId || sessionId);
             } else {
@@ -354,7 +357,7 @@ export const useChatStore = create(
 
         globalSendMessage: async (messageText, customMcpList = null, callbacks = {}) => {
           const {
-            input, isAnswering, selectedCameraIds, mcpList,
+            input, isAnswering, selectedCameraIds, mcpList, functionCallingFormat,
             setIsScrollToBottom, setCurrentAnswer, setAnswerMessages, startNewRound, setMcpList
           } = get();
 
@@ -392,6 +395,7 @@ export const useChatStore = create(
             query: inputText,
             camera_ids: selectedCameraIds,
             mcp_list: finalMcpList,
+            function_calling_format: functionCallingFormat,
           };
 
           // execute send before callback

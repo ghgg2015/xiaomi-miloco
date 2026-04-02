@@ -21,6 +21,7 @@ export const processHistorySocketMessages = (session) => {
 
   let latestCameraIds = [];
   let latestMcpList = [];
+  let latestFunctionCallingFormat = 'openai';
 
   session.forEach((messageData) => {
     const { header, payload } = messageData;
@@ -38,10 +39,11 @@ export const processHistorySocketMessages = (session) => {
           });
         }
         const requestData = JSON.parse(payload);
-        const { query, mcp_list, camera_ids, chat_mode } = requestData;
+        const { query, mcp_list, camera_ids, chat_mode, function_calling_format } = requestData;
 
         if (camera_ids !== undefined) {latestCameraIds = Array.isArray(camera_ids) ? camera_ids : [];}
         if (mcp_list !== undefined) {latestMcpList = Array.isArray(mcp_list) ? mcp_list : [];}
+        if (function_calling_format !== undefined) {latestFunctionCallingFormat = function_calling_format || 'openai';}
 
         console.log('extract history record configuration:', {
           camera_ids: latestCameraIds,
@@ -52,6 +54,7 @@ export const processHistorySocketMessages = (session) => {
           type: 'question',
           text: query,
           mcpList: mcp_list || [],
+          functionCallingFormat: latestFunctionCallingFormat,
           timestamp: header.timestamp,
           requestId: header.request_id,
           sessionId: header.session_id
@@ -233,6 +236,7 @@ export const processHistorySocketMessages = (session) => {
     latestConfig: {
       cameraIds: latestCameraIds,
       mcpList: latestMcpList,
+      functionCallingFormat: latestFunctionCallingFormat,
     }
   };
 };

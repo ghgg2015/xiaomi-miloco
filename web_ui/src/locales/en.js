@@ -48,6 +48,8 @@ export default {
       cameraSelect: 'Camera Selection',
       noCamera: 'No available cameras',
       noService: 'No available MCP services',
+      functionCallingOpenAI: 'OpenAI Native',
+      functionCallingQwenXml: 'Qwen XML',
       createRule: 'Manually create rule',
       createRuleTooltip: 'Click to manually create a rule',
       noProject: 'No available projects',

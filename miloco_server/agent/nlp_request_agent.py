@@ -45,6 +45,7 @@ class NlpRequestAgent(ChatAgent):
             ChatCachedData(
                 camera_ids=payload.camera_ids,
                 mcp_ids=payload.mcp_list,
+                function_calling_format=payload.function_calling_format,
             ))
 
         asyncio.create_task(self._run_chat(query))

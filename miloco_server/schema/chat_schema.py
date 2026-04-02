@@ -111,6 +111,10 @@ class Nlp:
         query: str = Field(..., description="Request content")
         mcp_list: Optional[List[str]] = Field(default_factory=list, description="List of MCP IDs to call")
         camera_ids: Optional[List[str]] = Field(None, description="Camera ID list")
+        function_calling_format: Optional[str] = Field(
+            "openai",
+            description="Function calling format, e.g. openai or qwen_xml",
+        )
 
     class ActionDescriptionDynamicExecute(EventPayload):
         action_descriptions: List[str] = Field(..., description="Action descriptions")

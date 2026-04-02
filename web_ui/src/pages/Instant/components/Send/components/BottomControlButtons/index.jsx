@@ -3,8 +3,8 @@
  * This software may be used and distributed according to the terms of the Xiaomi Miloco License Agreement.
  */
 
-import React, { useCallback } from 'react';
-import { Button, Flex, Tooltip } from 'antd';
+import React from 'react';
+import { Button, Flex, Select, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import Icon from '@/components/Icon';
 import { useChatStore } from '@/stores/chatStore';
@@ -25,13 +25,13 @@ const BottomControlButtons = () => {
     cameraList,
     selectedCameraIds,
     isAnswering,
-    sessionId,
     mcpList,
+    functionCallingFormat,
     mcpVisible,
     availableMcpServices,
     mcpLoading,
     cameraVisible,
-    setMcpList,
+    setFunctionCallingFormat,
     toggleMcpService,
     toggleMcpVisible,
     setCameraVisible,
@@ -47,6 +47,10 @@ const BottomControlButtons = () => {
 
   const onlineCameraList = cameraList.filter(item => item?.online || false);
   const autoSelect = onlineCameraList.length === 0 && selectedCameraIds.length === 0;
+  const functionCallingOptions = [
+    { value: 'openai', label: 'OpenAI Native' },
+    { value: 'qwen_xml', label: 'Qwen XML' },
+  ];
 
   return (
     <Flex justify="space-between" style={{ flex: 0 }} align="center" className={styles.sendFooter}>
@@ -82,6 +86,18 @@ const BottomControlButtons = () => {
               descField: 'model',
               disabledField: 'online'
             }}
+          />
+        </div>
+
+        <div className={styles.buttonContainer}>
+          <Select
+            value={functionCallingFormat}
+            onChange={setFunctionCallingFormat}
+            options={functionCallingOptions}
+            disabled={isAnswering}
+            size="small"
+            className={styles.functionCallingSelect}
+            popupMatchSelectWidth={false}
           />
         </div>
 

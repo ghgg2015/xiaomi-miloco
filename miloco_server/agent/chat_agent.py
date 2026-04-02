@@ -250,6 +250,11 @@ class ChatAgent(Actor):
             finalized_tool_calls: list[
                 ChatCompletionMessageToolCall] = self._merge_delta_tool_calls(
                     delta_tool_call_list)
+            if not finalized_tool_calls:
+                finalized_tool_calls = self._extract_text_tool_calls(finalized_content)
+                if finalized_tool_calls:
+                    finish_reason = "tool_calls"
+                    display_content = ""
 
             logger.info(
                 "[%s] ChatAgent step %d finalized_content: %s, finalized_tool_calls: %s, finish_reason: %s",
@@ -283,7 +288,12 @@ class ChatAgent(Actor):
             tools = self._all_mcp_tools_meta or None
             tool_choice = None
             chat_data = self._chat_companion.get_chat_data(self._request_id)
-            if tools and chat_data and chat_data.camera_ids:
+            function_calling_format = (
+                chat_data.function_calling_format
+                if chat_data and chat_data.function_calling_format
+                else "openai"
+            )
+            if tools and chat_data and chat_data.camera_ids and function_calling_format == "openai":
                 # When the user selected cameras, require tool usage so the model
                 # inspects camera content via vision tools instead of replying
                 # with a generic "I can't access your camera" disclaimer.
@@ -331,6 +341,64 @@ class ChatAgent(Actor):
             self, tool_calls: list[ChatCompletionMessageToolCall]) -> bool:
         """Check if there are tool calls."""
         return tool_calls is not None and len(tool_calls) > 0
+
+    def _extract_text_tool_calls(self, content: str) -> list[ChatCompletionMessageToolCall]:
+        """Parse text-based tool call output such as Qwen XML tool_call blocks."""
+        if not content:
+            return []
+
+        matches = re.findall(
+            r"<tool_call>\s*([\s\S]*?)\s*</tool_call>",
+            content,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if not matches:
+            return []
+
+        tool_calls: list[ChatCompletionMessageToolCall] = []
+        for index, tool_call_text in enumerate(matches):
+            try:
+                tool_call_data = json.loads(tool_call_text)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                logger.warning("[%s] Failed to parse text tool call: %s", self._request_id, tool_call_text)
+                continue
+
+            tool_name = self._map_text_tool_name(tool_call_data.get("name", ""))
+            arguments = tool_call_data.get("arguments", {})
+            if not tool_name:
+                continue
+
+            if not isinstance(arguments, str):
+                arguments = json.dumps(arguments, ensure_ascii=False)
+
+            tool_calls.append(
+                ChatCompletionMessageToolCall(
+                    id=f"text_tool_call_{index}",
+                    type="function",
+                    function={
+                        "name": tool_name,
+                        "arguments": arguments or "{}",
+                    },  # type: ignore[arg-type]
+                )
+            )
+
+        return tool_calls
+
+    def _map_text_tool_name(self, tool_name: str) -> str:
+        """Map text-style tool names to registered MCP tool names."""
+        normalized_name = (tool_name or "").strip()
+        if not normalized_name:
+            return ""
+
+        if "___" in normalized_name:
+            return normalized_name
+
+        tool_name_mapping = {
+            "vision_analyze": f"{LocalMcpClientId.LOCAL_DEFAULT}___vision_understand",
+            "vision_understand": f"{LocalMcpClientId.LOCAL_DEFAULT}___vision_understand",
+            "create_rule": f"{LocalMcpClientId.LOCAL_DEFAULT}___create_rule",
+        }
+        return tool_name_mapping.get(normalized_name, normalized_name)
 
     def _sanitize_assistant_content(self, content: str) -> str:
         """Keep only user-facing answer text from model output."""

@@ -26,6 +26,7 @@ class ChatCachedData:
     out_actor_address: Optional[ActorAddress] = None
     camera_ids: Optional[list[str]] = None
     mcp_ids: Optional[list[str]] = None
+    function_calling_format: Optional[str] = None
     other_mcp_tools_meta: Optional[list] = None
     camera_images: Optional[list[CameraImgSeq]] = None
 

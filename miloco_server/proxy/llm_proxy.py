@@ -115,12 +115,17 @@ class OpenAIProxy(LLMProxy):
                 "Async calling model: %s, stream: False, messages: %s, tools: %s",
                 self.model_name, messages, tools
             )
+            create_kwargs = {
+                "model": self.model_name,
+                "messages": messages,
+                "stream": False,
+                "temperature": 0,
+            }
+            if tools:
+                create_kwargs["tools"] = tools
+
             completion = await self.async_client.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                stream=False,
-                tools=tools,
-                temperature=0,
+                **create_kwargs,
             )
             logger.info("Async model call completed successfully")
             return {
@@ -153,12 +158,17 @@ class OpenAIProxy(LLMProxy):
                 "Async calling model: %s, stream: True, messages: %s, tools: %s",
                 self.model_name, messages, tools
             )
+            create_kwargs = {
+                "model": self.model_name,
+                "messages": messages,
+                "stream": True,
+                "temperature": 0,
+            }
+            if tools:
+                create_kwargs["tools"] = tools
+
             completion: AsyncStream = await self.async_client.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                stream=True,
-                tools=tools,
-                temperature=0,
+                **create_kwargs,
             )
             logger.info("Async model stream call completed successfully, completion: %s", completion)
             async for chunk in self._handle_async_stream_response(completion):

@@ -4,6 +4,7 @@
 """Chat Agent"""
 import json
 import logging
+import re
 from typing import AsyncGenerator, Any, Optional
 
 from openai.types.chat import ChatCompletionChunk
@@ -236,8 +237,6 @@ class ChatAgent(Actor):
 
                 if content_stream is not None and content_stream != "":
                     chunk_content_cache.append(content_stream)
-                    self._send_instruction(
-                        Template.ToastStream(stream=content_stream))
 
                 if current_tool_calls is not None:
                     delta_tool_call_list.append(current_tool_calls)
@@ -247,6 +246,7 @@ class ChatAgent(Actor):
                     break
 
             finalized_content = "".join(chunk_content_cache)
+            display_content = self._sanitize_assistant_content(finalized_content)
             finalized_tool_calls: list[
                 ChatCompletionMessageToolCall] = self._merge_delta_tool_calls(
                     delta_tool_call_list)
@@ -257,7 +257,11 @@ class ChatAgent(Actor):
                 finalized_tool_calls, finish_reason)
 
             self._chat_history_messages.add_assistant_message(
-                finalized_content, finalized_tool_calls)
+                display_content, finalized_tool_calls)
+
+            if display_content:
+                self._send_instruction(
+                    Template.ToastStream(stream=display_content))
 
             if self._has_tool_calls(finalized_tool_calls):
                 await self._execute_tools(finalized_tool_calls)
@@ -327,6 +331,40 @@ class ChatAgent(Actor):
             self, tool_calls: list[ChatCompletionMessageToolCall]) -> bool:
         """Check if there are tool calls."""
         return tool_calls is not None and len(tool_calls) > 0
+
+    def _sanitize_assistant_content(self, content: str) -> str:
+        """Keep only user-facing answer text from model output."""
+        if not content:
+            return ""
+
+        final_answer_match = re.search(
+            r"<final_answer>\s*(.*?)\s*</final_answer>",
+            content,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if final_answer_match:
+            return final_answer_match.group(1).strip()
+
+        cleaned = re.sub(
+            r"<reflect>.*?</reflect>",
+            "",
+            content,
+            flags=re.IGNORECASE | re.DOTALL,
+        ).strip()
+        if cleaned:
+            content = cleaned
+
+        try:
+            data = json.loads(content)
+            if isinstance(data, dict):
+                for key in ("final_answer", "answer", "observation", "content"):
+                    value = data.get(key)
+                    if isinstance(value, str) and value.strip():
+                        return value.strip()
+        except (TypeError, ValueError, json.JSONDecodeError):
+            pass
+
+        return content.strip()
 
     def _merge_delta_tool_calls(
         self, delta_tool_call_list: list[list[ChoiceDeltaToolCall]]

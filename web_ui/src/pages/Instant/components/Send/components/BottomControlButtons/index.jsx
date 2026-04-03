@@ -45,8 +45,7 @@ const BottomControlButtons = () => {
   const availableMcpList = availableMcpServices.filter(service => mcpList.includes(service.client_id))
   const availableMcpListIds = availableMcpList.map(service => service.client_id)
 
-  const onlineCameraList = cameraList.filter(item => item?.online || false);
-  const autoSelect = onlineCameraList.length === 0 && selectedCameraIds.length === 0;
+  const autoSelect = cameraList.length > 0 && selectedCameraIds.length === 0;
   const functionCallingOptions = [
     { value: 'openai', label: 'OpenAI Native' },
     { value: 'qwen_xml', label: 'Qwen XML' },
@@ -83,8 +82,7 @@ const BottomControlButtons = () => {
             itemConfig={{
               idField: 'did',
               nameField: 'name',
-              descField: 'model',
-              disabledField: 'online'
+              descField: 'model'
             }}
           />
         </div>

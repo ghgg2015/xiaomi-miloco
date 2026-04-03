@@ -128,8 +128,7 @@ export const useChatStore = create(
         handleCameraSelectAll: (checked) => {
           const { cameraList, setSelectedCameraIds } = get();
           if (checked) {
-            const onlineCameraList = cameraList.filter(item => item.online);
-            setSelectedCameraIds(onlineCameraList.map(item => item.did));
+            setSelectedCameraIds(cameraList.map(item => item.did));
           } else {
             setSelectedCameraIds([]);
           }

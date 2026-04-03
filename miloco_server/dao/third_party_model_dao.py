@@ -7,6 +7,7 @@ Handles CRUD operations for model_vendor table
 """
 
 import logging
+import json
 import uuid
 from typing import Optional, List, Dict, Any
 from miloco_server.utils.database import get_db_connector

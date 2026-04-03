@@ -79,11 +79,13 @@ const UnifiedSelector = ({
   }, [visible, onClose]);
 
   if (!visible) { return null }
-  const onlineItems = items.filter(item => item?.[itemConfig?.disabledField] || false);
-  const onlineItemsEmpty = onlineItems.length === 0;
+  const selectableItems = itemConfig?.disabledField
+    ? items.filter(item => item?.[itemConfig?.disabledField] || false)
+    : items;
+  const onlineItemsEmpty = selectableItems.length === 0;
 
-  const isAllSelected = onlineItems.length > 0 && selectedIds.length === onlineItems.length;
-  const hasPartialSelection = selectedIds.length > 0 && selectedIds.length < onlineItems.length;
+  const isAllSelected = selectableItems.length > 0 && selectedIds.length === selectableItems.length;
+  const hasPartialSelection = selectedIds.length > 0 && selectedIds.length < selectableItems.length;
 
   return (
     <div className={styles.selector} ref={selectorRef}>

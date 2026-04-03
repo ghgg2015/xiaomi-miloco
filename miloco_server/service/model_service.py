@@ -15,6 +15,7 @@ from miloco_server.dao.kv_dao import KVDao, SystemConfigKeys
 from miloco_server.dao.third_party_model_dao import ThirdPartyModelDAO
 from miloco_server.utils.local_models import LocalModels, ModelPurpose
 from miloco_server.proxy.llm_proxy import LLMProxy, OpenAIProxy
+from miloco_server.proxy.vision_adapter import VisionAdapterFactory, VisionModelAdapter
 from miloco_server.schema.model_schema import (
     ThirdPartyModelCreate, ThirdPartyModelInfo, LLMModelInfo, ModelsList
 )
@@ -35,6 +36,7 @@ class ModelService:
         self._third_party_model_dao = third_party_model_dao
         self._model_id_by_purpose = {}
         self._llm_proxy_by_purpose = {}
+        self._model_info_by_purpose = {}
         self._local_models = LocalModels()
 
         try:
@@ -47,6 +49,7 @@ class ModelService:
 
         self._model_id_by_purpose = {}
         self._llm_proxy_by_purpose = {}
+        self._model_info_by_purpose = {}
         # Get current model ID configuration
         model_purpose_str = self._kv_dao.get(SystemConfigKeys.CURRENT_MODEL_ID_KEY)
         if not model_purpose_str:
@@ -95,6 +98,7 @@ class ModelService:
                 raise BusinessException("Failed to set current model")
 
         self._model_id_by_purpose = model_id_by_purpose
+        self._model_info_by_purpose = llm_proxy_by_purpose.copy()
         # Create and cache LLM proxy
         self._llm_proxy_by_purpose = {
             purpose:
@@ -106,6 +110,22 @@ class ModelService:
 
     def get_llm_proxy(self) -> dict[ModelPurpose, LLMProxy]:
         return self._llm_proxy_by_purpose
+
+    def get_model_info(self) -> dict[ModelPurpose, LLMModelInfo]:
+        """Get current model metadata by purpose."""
+        return self._model_info_by_purpose
+
+    def get_vision_adapter(self, purpose: ModelPurpose, request_id: str) -> VisionModelAdapter | None:
+        """Create a vision adapter for the given purpose."""
+        llm_proxy = self._llm_proxy_by_purpose.get(purpose)
+        if not llm_proxy:
+            return None
+        model_info = self._model_info_by_purpose.get(purpose)
+        return VisionAdapterFactory.create_adapter(
+            request_id=request_id,
+            model_info=model_info,
+            llm_proxy=llm_proxy,
+        )
 
     async def set_current_model(self, model_id: Optional[str], purpose: ModelPurpose):
         """

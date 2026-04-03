@@ -23,6 +23,7 @@ from miloco_server.dao.trigger_dao import TriggerRuleDAO
 from miloco_server.dao.third_party_model_dao import ThirdPartyModelDAO
 from miloco_server.dao.mcp_config_dao import MCPConfigDAO
 from miloco_server.proxy.llm_proxy import LLMProxy
+from miloco_server.proxy.vision_adapter import VisionModelAdapter
 from miloco_server.proxy.miot_proxy import MiotProxy
 from miloco_server.proxy.ha_proxy import HAProxy
 from miloco_server.service.trigger_rule_runner import TriggerRuleRunner
@@ -194,6 +195,13 @@ class Manager:
             logger.warning("LLM proxy not set in purpose: %s", purpose)
             return None
         return llm_proxy_by_purpose[purpose]
+
+    def get_vision_adapter_by_purpose(self, purpose: ModelPurpose, request_id: str) -> VisionModelAdapter:
+        """Get vision adapter by model purpose."""
+        adapter = self._model_service.get_vision_adapter(purpose, request_id)
+        if adapter is None:
+            logger.warning("Vision adapter not set in purpose: %s", purpose)
+        return adapter
 
     def get_language(self) -> UserLanguage:
         return self._auth_service.get_user_language().language

@@ -3,7 +3,7 @@
  * This software may be used and distributed according to the terms of the Xiaomi Miloco License Agreement.
  */
 
-import { Modal, Form, Input, Select, message } from 'antd';
+import { Modal, Form, Input, Select, Switch, message } from 'antd';
 import { getVendorModels } from "@/api";
 import { useTranslation } from 'react-i18next';
 import { useState, useMemo } from 'react';
@@ -106,7 +106,11 @@ const ModelModal = ({
         initialValues={{
           name: editingModel ? '' : [],
           apiKey: '',
-          baseUrl: ''
+          baseUrl: '',
+          provider: 'openai',
+          apiStyle: 'openai_compatible',
+          supportsVision: false,
+          extraConfigText: '{}'
         }}
       >
         <Form.Item
@@ -122,6 +126,61 @@ const ModelModal = ({
           rules={[{ required: true, message: t('modelModal.pleaseEnterApiKey') }]}
         >
           <Input placeholder={t('modelModal.apiKeyPlaceholder')} />
+        </Form.Item>
+        <Form.Item
+          label={t('modelModal.provider')}
+          name="provider"
+          rules={[{ required: true, message: t('modelModal.pleaseSelectProvider') }]}
+        >
+          <Select
+            options={[
+              { label: t('modelModal.providerOptions.openai'), value: 'openai' },
+              { label: t('modelModal.providerOptions.qwen'), value: 'qwen' },
+              { label: t('modelModal.providerOptions.custom'), value: 'custom' },
+              { label: t('modelModal.providerOptions.local'), value: 'local' },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item
+          label={t('modelModal.apiStyle')}
+          name="apiStyle"
+          rules={[{ required: true, message: t('modelModal.pleaseSelectApiStyle') }]}
+        >
+          <Select
+            options={[
+              { label: t('modelModal.apiStyleOptions.openaiCompatible'), value: 'openai_compatible' },
+              { label: t('modelModal.apiStyleOptions.qwenXml'), value: 'qwen_xml' },
+              { label: t('modelModal.apiStyleOptions.customRest'), value: 'custom_rest' },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item
+          label={t('modelModal.supportsVision')}
+          name="supportsVision"
+          valuePropName="checked"
+        >
+          <Switch />
+        </Form.Item>
+        <Form.Item
+          label={t('modelModal.extraConfig')}
+          name="extraConfigText"
+          rules={[
+            {
+              validator: (_, value) => {
+                if (!value || !value.trim()) {
+                  return Promise.resolve();
+                }
+                try {
+                  JSON.parse(value);
+                  return Promise.resolve();
+                } catch {
+                  return Promise.reject(new Error(t('modelModal.pleaseEnterValidJson')));
+                }
+              }
+            }
+          ]}
+        >
+          <Input.TextArea rows={6} placeholder='{"image_input_style":"image_url"}' />
         </Form.Item>
         <Form.Item
           label={t('modelModal.modelName')}

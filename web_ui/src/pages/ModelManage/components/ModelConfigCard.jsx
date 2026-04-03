@@ -46,7 +46,16 @@ const ModelConfigCard = ({ models }) => {
       value: model.id,
       label: `${model.local ? t('modelModal.localModel') : t('modelModal.cloudModel')} : ${model.name}`,
       loaded: model.loaded,
+      supportsVision: model.supportsVision,
     }));
+  };
+
+  const getOptionsByPurpose = (purposeType) => {
+    const options = generateModelOptions();
+    if (purposeType === 'vision_understanding') {
+      return options.filter(option => option.supportsVision);
+    }
+    return options;
   };
 
   const modelStateHash = useMemo(() => {
@@ -78,7 +87,7 @@ const ModelConfigCard = ({ models }) => {
               allowClear
               onClear={() => handleModelChange(null, item.type)}
             >
-              {generateModelOptions().map(option => {
+              {getOptionsByPurpose(item.type).map(option => {
                 return (
                   <Option
                     key={option.value}

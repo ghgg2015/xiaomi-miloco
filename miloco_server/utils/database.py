@@ -74,6 +74,8 @@ class SQLiteConnector:
                             "Model vendor table not found, creating...")
                         self._create_model_vendor_table(conn)
                         tables_created.append("model_vendor")
+                    else:
+                        self._migrate_model_vendor_table(conn)
 
                     if "chat_history" not in existing_tables:
                         logger.info(
@@ -181,6 +183,10 @@ class SQLiteConnector:
                 base_url TEXT NOT NULL,
                 api_key TEXT NOT NULL,
                 model_name TEXT NOT NULL,
+                provider TEXT DEFAULT 'openai',
+                api_style TEXT DEFAULT 'openai_compatible',
+                supports_vision BOOLEAN DEFAULT 0,
+                extra_config TEXT DEFAULT '{}',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -194,6 +200,24 @@ class SQLiteConnector:
             "CREATE INDEX IF NOT EXISTS idx_model_vendor_base_url ON model_vendor(base_url)"
         )
         logger.info("Model vendor table created successfully")
+
+    def _migrate_model_vendor_table(self, conn: sqlite3.Connection) -> None:
+        """Migrate model_vendor table with newly added columns."""
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(model_vendor)")
+        existing_columns = {row[1] for row in cursor.fetchall()}
+
+        column_defs = {
+            "provider": "TEXT DEFAULT 'openai'",
+            "api_style": "TEXT DEFAULT 'openai_compatible'",
+            "supports_vision": "BOOLEAN DEFAULT 0",
+            "extra_config": "TEXT DEFAULT '{}'",
+        }
+
+        for column_name, column_def in column_defs.items():
+            if column_name not in existing_columns:
+                cursor.execute(f"ALTER TABLE model_vendor ADD COLUMN {column_name} {column_def}")
+                logger.info("Added missing column %s to model_vendor", column_name)
 
     def _create_mcp_config_table(self, conn: sqlite3.Connection) -> None:
         """Create MCP config table"""

@@ -54,6 +54,11 @@ const ModelItem = ({
         <img src={llmIcon} className={styles.modelIcon} />
         <div className={styles.modelNameContainer}>
           <span className={styles.modelName}>{model.name}</span>
+          {!model.local && (
+            <span className={styles.vramUsage}>
+              {`${model.provider || 'openai'} / ${model.apiStyle || 'openai_compatible'} / vision:${model.supportsVision ? 'yes' : 'no'}`}
+            </span>
+          )}
           {model.local && (
             <span className={styles.vramUsage}>
               {getVramUsageText()}

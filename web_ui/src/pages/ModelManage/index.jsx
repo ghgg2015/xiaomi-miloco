@@ -56,6 +56,10 @@ const ModelManage = () => {
       name: editingModel ? '' : [],
       apiKey: '',
       baseUrl: '',
+      provider: 'openai',
+      apiStyle: 'openai_compatible',
+      supportsVision: false,
+      extraConfigText: '{}',
     });
   };
 
@@ -67,12 +71,20 @@ const ModelManage = () => {
         name: model.name,
         apiKey: model.apiKey,
         baseUrl: model.baseUrl,
+        provider: model.provider || 'openai',
+        apiStyle: model.apiStyle || 'openai_compatible',
+        supportsVision: !!model.supportsVision,
+        extraConfigText: JSON.stringify(model.extraConfig || {}, null, 2),
       });
     } else {
       form.setFieldsValue({
         name: [],
         apiKey: '',
         baseUrl: '',
+        provider: 'openai',
+        apiStyle: 'openai_compatible',
+        supportsVision: false,
+        extraConfigText: '{}',
       });
     }
   };

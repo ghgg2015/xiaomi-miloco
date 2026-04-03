@@ -82,6 +82,10 @@ export const useModelManagement = () => {
           name: item.model_name,
           apiKey: item.api_key,
           baseUrl: item.base_url,
+          provider: item.provider || 'openai',
+          apiStyle: item.api_style || 'openai_compatible',
+          supportsVision: !!item.supports_vision,
+          extraConfig: item.extra_config || {},
           local: item.local,
           estimate_vram_usage: item.estimate_vram_usage,
           loaded: item.loaded,
@@ -117,6 +121,10 @@ export const useModelManagement = () => {
           model_name: values.name,
           base_url: values.baseUrl,
           api_key: values.apiKey,
+          provider: values.provider,
+          api_style: values.apiStyle,
+          supports_vision: !!values.supportsVision,
+          extra_config: values.extraConfigText ? JSON.parse(values.extraConfigText) : {},
         });
         if (res && res.code === 0) {
           await refreshModels();
@@ -132,6 +140,10 @@ export const useModelManagement = () => {
           model_names: modelNames,
           base_url: values.baseUrl,
           api_key: values.apiKey,
+          provider: values.provider,
+          api_style: values.apiStyle,
+          supports_vision: !!values.supportsVision,
+          extra_config: values.extraConfigText ? JSON.parse(values.extraConfigText) : {},
         });
 
         if (res && res.code === 0) {

@@ -28,7 +28,11 @@ class ThirdPartyModelDAO:
             id=data["id"],
             base_url=data["base_url"],
             api_key=data["api_key"],
-            model_name=data["model_name"]
+            model_name=data["model_name"],
+            provider=data.get("provider", "openai"),
+            api_style=data.get("api_style", "openai_compatible"),
+            supports_vision=bool(data.get("supports_vision", 0)),
+            extra_config=json.loads(data.get("extra_config") or "{}"),
         )
 
     def create(self, model: ThirdPartyModelInfo) -> Optional[str]:
@@ -45,10 +49,19 @@ class ThirdPartyModelDAO:
             model_id = str(uuid.uuid4())
 
             sql = """
-                INSERT INTO model_vendor (id, base_url, api_key, model_name)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO model_vendor (id, base_url, api_key, model_name, provider, api_style, supports_vision, extra_config)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """
-            params = (model_id, model.base_url, model.api_key, model.model_name)
+            params = (
+                model_id,
+                model.base_url,
+                model.api_key,
+                model.model_name,
+                model.provider,
+                model.api_style,
+                1 if model.supports_vision else 0,
+                json.dumps(model.extra_config or {}, ensure_ascii=False),
+            )
 
             affected_rows = self.db_connector.execute_update(sql, params)
 
@@ -124,10 +137,19 @@ class ThirdPartyModelDAO:
         try:
             sql = """
                 UPDATE model_vendor
-                SET base_url = ?, api_key = ?, model_name = ?, updated_at = CURRENT_TIMESTAMP
+                SET base_url = ?, api_key = ?, model_name = ?, provider = ?, api_style = ?, supports_vision = ?, extra_config = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             """
-            params = (model.base_url, model.api_key, model.model_name, model.id)
+            params = (
+                model.base_url,
+                model.api_key,
+                model.model_name,
+                model.provider,
+                model.api_style,
+                1 if model.supports_vision else 0,
+                json.dumps(model.extra_config or {}, ensure_ascii=False),
+                model.id,
+            )
 
             affected_rows = self.db_connector.execute_update(sql, params)
 

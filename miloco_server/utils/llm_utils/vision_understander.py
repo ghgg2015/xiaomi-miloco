@@ -1,21 +1,19 @@
 # Copyright (C) 2025 Xiaomi Corporation
 # This software may be used and distributed according to the terms of the Xiaomi Miloco License Agreement.
 
+"""Vision understanding facade built on top of model adapters."""
+
 import logging
 
-from miloco_server.utils.local_models import ModelPurpose
-from miloco_server.utils.prompt_helper import VisionUnderstandToolPromptBuilder
-
-from miloco_server.schema.miot_schema import CameraImgSeq
-
 from miloco_server.schema.auth_schema import UserLanguage
-
-from miloco_server.utils.llm_utils.base_llm_util import BaseLLMUtil
+from miloco_server.schema.miot_schema import CameraImgSeq
+from miloco_server.utils.local_models import ModelPurpose
 
 logger = logging.getLogger(__name__)
 
-class VisionUnderstander(BaseLLMUtil):
-    """Actor for understanding and processing vision-related tasks."""
+
+class VisionUnderstander:
+    """Facade for understanding and processing vision-related tasks."""
 
     def __init__(
         self,
@@ -24,23 +22,35 @@ class VisionUnderstander(BaseLLMUtil):
         camera_img_seqs: list[CameraImgSeq],
         language: UserLanguage,
     ):
-        """Initialize VisionUnderstander"""
-        super().__init__(request_id=request_id, query=query, tools_meta=None)
-        self._llm_proxy = self._manager.get_llm_proxy_by_purpose(ModelPurpose.VISION_UNDERSTANDING)
+        """Initialize VisionUnderstander."""
+        from miloco_server.service.manager import get_manager  # pylint: disable=import-outside-toplevel
+
+        self._manager = get_manager()
+        self._request_id = request_id
+        self._query = query
         self._camera_img_seqs = camera_img_seqs
         self._language = language
-        self._init_conversation()
-        logger.info("[%s] VisionUnderstander initialized, llm_proxy: %s", self._request_id, self._llm_proxy)
-
-
-    def _init_conversation(self) -> None:
-        self._chat_history = VisionUnderstandToolPromptBuilder.build_prompt(
-            self._camera_img_seqs, self._query, self._language)
+        self._vision_adapter = self._manager.get_vision_adapter_by_purpose(
+            ModelPurpose.VISION_UNDERSTANDING,
+            request_id=self._request_id,
+        )
+        logger.info(
+            "[%s] VisionUnderstander initialized, adapter: %s",
+            self._request_id,
+            self._vision_adapter,
+        )
 
     async def run(self) -> str | None:
-        """Run agent to process user query"""
-        logger.info("[%s] Starting to vision understand", self._request_id)
+        """Run adapter to process vision query."""
+        logger.info("[%s] Starting vision understanding", self._request_id)
+        if not self._vision_adapter:
+            raise RuntimeError(
+                "Vision model adapter not exist, Please configure on the Model Settings Page."
+            )
 
-        content, _, _ = await self._call_llm()
-        return content
-
+        result = await self._vision_adapter.analyze_images(
+            query=self._query,
+            camera_img_seqs=self._camera_img_seqs,
+            language=self._language,
+        )
+        return result.content
